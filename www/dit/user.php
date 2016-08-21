@@ -1,0 +1,143 @@
+<?php
+  include_once('./js/header.php');
+  $ajax = false;
+
+include 'database.php';
+include 'functions.php';
+sec_session_start();
+if(login_check() == true) {
+   global $n;
+
+        $user_id = $_SESSION['user_id'];
+        $stmt = new DB_Sql;
+        if ($stmt->query("SELECT id, type, username, agentID, monthlyfee, onetimeRFee, activeaccounts, addonfee, addonpackages, pendinginvoice, update_time, mainAgent from agents where id = '$user_id'")) {
+                $stmt->next_record();
+		$monthfee = $stmt->f("monthlyfee");
+		$addonfee = $stmt->f("addonfee");
+		$onetimeRF = $stmt->f("onetimeRFee");
+                $uname = $stmt->f("username");
+                $agent_id = $stmt->f("agentID");
+                $magent_id = $agent_id;
+                $utype = $stmt->f("type");
+                $magent = $stmt->f("mainAgent");
+        }
+   echo page_head(true,true,$uname);
+      echo '<script type="text/javascript">
+         var break_link=true;
+         </script>';
+
+
+   if($utype == "main"){
+        echo        '        <div class="pull-right">'.$n;
+        echo        '          <a class="btn btn-primary" href="register.php">Add Accounts</a>'.$n;
+        echo        '        </div>'.$n;
+   }else if($utype == "subuser" || $utype == "subagent"){
+	   echo 'You are not authorized to access this page as sub-user, please login with the main account. <a href="login.php">Back</a> <br/>';
+	   exit;
+   }
+
+
+	echo '<div class="input-prepend input-group">
+        <span class="input-group-addon add-on">Search:</span>
+        <input class="filter form-control" id="prependedInput" type="text" style="width:250px;" placeholder="eg. Email">
+      </div>';
+
+
+        echo '<script>
+         $(\'input.filter\').keyup(function() {
+            var rex = new RegExp($(this).val(), \'i\');
+            $(\'.searchable tr\').hide();
+                $(\'.searchable tr\').filter(function() {
+                    return rex.test($(this).text());
+                }).show();
+            });
+        </script>';
+
+
+   $agent_sql = "mainAgent";
+   //$sub_select = "and agentID = 0";
+   $sub_select = "";
+   if($utype == "subagent"){
+	$agent_sql = "subAgent";
+	$agent_id = $user_id;
+	$sub_select="";
+   }
+        $stmt2 = new DB_Sql;
+//        if ($stmt2->query("SELECT * from agents where ".$agent_sql." = '$agent_id' ".$sub_select."")) {
+        if ($stmt2->query("SELECT * from agents where 1 order by type")) {
+	
+           if($stmt2->num_rows() > 0) { // If the user exists
+		
+             echo ' <table class="table table-hover">
+                      <caption><h3>Account List</h3></br><h4  style="color:gray">click one to edit details</h4></br></caption>
+                    <thead>
+                      <tr>
+                        <th>Account ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Type</th>';
+	if($utype == "main"){
+	}
+              echo      '<th>Operation</th>
+                      </tr>
+                    </thead>
+                    <tbody class="searchable">';
+                while($stmt2->next_record()){
+			$sub_id = $stmt2->f("id");
+			$sub_uname = $stmt2->f("username");
+			$sub_email = $stmt2->f("email");
+			$sub_utype = $stmt2->f("type");
+				$sub_aid = $stmt2->f("subAgent");
+			$sub_magent = $stmt2->f("mainAgent");
+			$sub_onetimeRF = $stmt2->f("onetimeRFee");
+			$sub_monthfee = $stmt2->f("monthlyfee");
+			$sub_addonfee = $stmt2->f("addonfee");
+                        $sub_monthlyday = $stmt2->f("monthlyday");
+                        $sub_onetimeday = $stmt2->f("onetimeday");
+                        $sub_agid = $stmt2->f("agentID");
+
+			$sub_phone = $stmt2->f("phone");
+			if($sub_utype=="main"){
+				$sub_magid = $sub_agid;
+				$sub_utypestr = "Admin";
+				$sub_tag = "info";
+			}else{
+				$sub_magid = $sub_magent.'-'.$sub_id;
+				$sub_utypestr = "Sub Agent";
+				$sub_tag = "";
+			}
+
+		if($sub_magid!="10086"){
+                echo '<tr class="'.$sub_tag.'" onmouseover="this.style.cursor=\'pointer\'" onclick="if (break_link) window.location =\'user_edit.php?id='.$sub_id.'\'">
+                        <td>'.$sub_magid.'</td>
+                        <td>'.$sub_uname.'</td>
+                        <td>'.$sub_email.'</td>
+                        <td>'.$sub_phone.'</td>
+                        <td>'.$sub_utypestr.'</td>';
+	
+        echo            '<td onmouseover="break_link=false;" onmouseout="break_link=true;"><form style="margin: 0 0 1px;float:left;" action="user_delete.php" method="post" onsubmit="return confirm(\'Are you sure to delete this agent?\');"><input type="hidden" id="uid" name="uid" value="'.$sub_id.'"><input type="submit" name="submit" value="Delete User" class="btn btn-xs btn-danger"/></form>&nbsp;&nbsp;&nbsp;&nbsp;<a class="btn btn-primary btn-xs" href="history.php?agid='.$sub_magid.'">View History</a>&nbsp;&nbsp;&nbsp;&nbsp;<a class="btn btn-default btn-xs" href="reports.php?agid='.$sub_magid.'">View Performance Report</a></td>
+                        </tr>';
+
+			}
+
+             }
+             echo '</tbody></table>';
+           }else{
+                // empty list?
+		echo '<h4>You don\'t have any sub-accounts.</h4>';
+           }
+        }else{
+                // failed to grab customer info
+        }
+
+	$stmt2->free();
+
+   echo page_foot($ajax);
+} else {
+	   echo 'You are not authorized to access this page as sub-user, please login with the main account. <a href="login.php">Back</a> <br/>';
+}
+
+
+?>
+
